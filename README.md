@@ -2,12 +2,12 @@
 
 **Your expensive AI plans. A cheap AI does the chores.**
 
-> **TL;DR:** Claude Opus (or any coding agent) runs `delegate "fix the lint errors"`.
-> A cheap model does the work and replies with a 150-word report. You spend far fewer Opus tokens.
+> **TL;DR:** Opus runs `delegate "fix the lint errors"`. A cheap model does it and sends back a short report.
+> Fewer Opus tokens, same result.
 
-- One binary. Zero dependencies.
-- Works with any OpenAI-compatible gateway (OpenCode Go, OpenRouter, ...).
-- Works from any agent that can run a shell command (Claude Code, Codex, OpenCode, ...).
+- One binary, no dependencies
+- Any OpenAI-compatible gateway (OpenCode Go, OpenRouter, ...)
+- Any agent that can run a shell command (Claude Code, OpenCode, Codex, ...)
 
 ---
 
@@ -20,19 +20,13 @@ git clone https://github.com/fahimscirex/delegate && cd delegate
 ./install.sh
 ```
 
-**2. Set your API key**
+**2. Add your API key** to `~/.bashrc` or `~/.zshrc`
 
 ```bash
-export OPENCODE_GO_API_KEY=your-key    # put this in ~/.bashrc or ~/.zshrc
+export OPENCODE_GO_API_KEY=your-key
 ```
 
-**3. Try it**
-
-```bash
-delegate -C ~/my-project "Fix the failing test in calc_test.go"
-```
-
-That's it. From now on your agent delegates chores by itself.
+**3. Start a new agent session.** That's it.
 
 ---
 
@@ -44,137 +38,144 @@ Opus ──"do this chore"──▶ delegate ──▶ cheap model (edits files,
   └────────── short report (≤150 words) ◀───┘
 ```
 
-| Who | Does what |
+| Expensive model | Cheap model |
 |---|---|
-| **Opus / Fable** (expensive) | Plans, decides, reviews |
-| **delegate** (cheap) | Searches code, boilerplate, tests, renames, lint fixes, docs |
+| Plans | Searches code |
+| Decides | Writes boilerplate and tests |
+| Reviews | Renames, lint fixes, docs |
 
 ---
 
-## Usage
+## Three ways to use it
+
+**1. Do nothing.** Your agent delegates chores by itself.
+
+**2. Ask for it** in Claude Code:
+
+```
+/delegate add unit tests for parseConfig
+```
+
+In OpenCode or Codex, say: "use the delegate skill to ...".
+
+**3. Run it yourself:**
 
 ```bash
-delegate "task text"              # cheap tier, current folder
-delegate -C ~/repo task.md        # task from a file, in another folder
-delegate -t strong "task"         # use a smarter tier
-echo "task" | delegate -          # task from stdin
+delegate -C ~/repo "Fix the failing test in calc_test.go"
 ```
 
 | Flag | Meaning |
 |---|---|
 | `-t` | Tier: `cheap` (default), `mid`, `strong` |
-| `-C` | Folder the worker works in |
-| `-m` | Pick an exact model: `provider:model` |
-| `-max-steps` | Stop after N turns (default 40) |
+| `-C` | Folder to work in |
+| `-m` | Exact model: `provider:model` |
+| `-max-steps` | Max turns (default 40) |
+| `-version` | Print version |
 
-**Exit codes:** `0` done · `1` failed or blocked · `2` setup or API error
+Exit codes: `0` done · `1` failed · `2` setup error
 
 ---
 
 ## Config
 
-File: `~/.config/delegate/config.json` (or set `$DELEGATE_CONFIG`)
+File: `~/.config/delegate/config.json`
 
-**Change models.** Edit one line in `tiers`:
+**Change a model:**
 
 ```json
 "cheap": { "provider": "opencode-go", "model": "deepseek-v4.1-flash" }
 ```
 
-**Add a gateway.** Add an entry to `providers`:
+**Add a gateway:**
 
 ```json
 "openrouter": { "base_url": "https://openrouter.ai/api/v1", "key_env": "OPENROUTER_API_KEY" }
 ```
 
 <details>
-<summary>All config fields</summary>
+<summary>All fields</summary>
 
-- `providers.*.base_url`: OpenAI-compatible root URL (ends in `/v1`).
-- `providers.*.key_env`: name of the env var that holds the key.
-- `providers.*.headers`: extra headers. `{session}` becomes a per-run id. OpenCode Go needs `x-opencode-session`.
-- `tiers.*`: `provider` + `model`.
-- `default_tier`, `max_steps`, `bash_timeout_s`: defaults.
-- `env_file` (optional): a file of `export KEY=value` lines, read only when the key isn't in the environment.
+- `providers.*.base_url`: OpenAI-compatible URL, ends in `/v1`
+- `providers.*.key_env`: env var that holds the key
+- `providers.*.headers`: extra headers; `{session}` becomes a per-run id (OpenCode Go needs `x-opencode-session`)
+- `tiers.*`: `provider` + `model`
+- `default_tier`, `max_steps`, `bash_timeout_s`: defaults
+- `env_file`: optional file of `export KEY=value` lines, used only if the key isn't in the environment
+- `$DELEGATE_CONFIG`: use a different config file
 
 </details>
+
+---
+
+## Customize the skill
+
+| Edit | To change | Then |
+|---|---|---|
+| `share/skill/delegate/SKILL.md` | What gets delegated, and how | Nothing (it's a link) |
+| `share/rules.md` | The always-on rules | Re-run `./install.sh` |
+
+Start a new agent session after editing. Mid-session edits break the prompt cache.
 
 ---
 
 ## Uninstall
 
 ```bash
-./uninstall.sh                 # removes everything
-./uninstall.sh --keep-config   # keeps your config
+./uninstall.sh                 # remove everything
+./uninstall.sh --keep-config   # keep your config
 ```
 
+---
+
+## Good to know
+
+- **macOS:** no Go needed. Install downloads the right binary from the latest release.
+- **Updating:** `git pull && ./install.sh`
+- **Safety:** the worker can't see your API keys, and file edits stay in the `-C` folder.
+- **But:** its shell isn't sandboxed. Use a git worktree for risky jobs.
+
+---
+
 <details>
-<summary>What install / uninstall touch</summary>
+<summary>What install touches</summary>
 
 | Thing | Where |
 |---|---|
 | Binary | `~/.local/bin/delegate` |
 | Config | `~/.config/delegate/` |
-| Logs (full transcripts) | `~/.cache/delegate/` |
+| Logs | `~/.cache/delegate/` |
 | Skill link | `~/.claude/skills`, `~/.config/opencode/skills`, `~/.codex/skills` |
 | Rules block | `~/.claude/CLAUDE.md`, `~/.config/opencode/AGENTS.md`, `~/.codex/AGENTS.md` |
 
+- Binary source, first match wins: `DELEGATE_BIN` → build with Go → download release (checksum checked).
 - The rules block sits between `<!-- delegate:start -->` and `<!-- delegate:end -->`. Uninstall removes only that block.
-- Uninstall never touches a skill named `delegate` that isn't ours.
-- Same paths on Linux and macOS.
+- A skill named `delegate` that isn't ours is never touched.
 
 </details>
-
----
-
-## macOS
-
-Same steps. You don't need Go.
-
-- `install.sh` builds from source if Go is installed.
-- Otherwise it downloads the binary for your Mac (Apple Silicon or Intel) from the latest release and checks its checksum.
-- Linux works the same way (amd64 and arm64).
-
----
-
-## Safety
-
-- File tools can't leave the `-C` folder.
-- The worker's shell can't see your API keys.
-- **The shell itself is not sandboxed.** Use a git worktree or container for risky jobs.
-
----
 
 <details>
 <summary>Why the prompt cache stays warm</summary>
 
-- The system prompt and tool list never change, so the model's cache can reuse them.
-- History only grows; nothing is rewritten mid-run.
-- Each run sends one session id, so the gateway keeps routing to the same backend.
-- The orchestrator only gets the short report, which barely adds to its context.
+- The system prompt and tools never change, so they stay cached.
+- History only grows; nothing is rewritten.
+- One session id per run keeps the gateway on the same backend.
+- Opus only gets the short report, not the whole job.
 
 </details>
 
 <details>
-<summary>Developing</summary>
+<summary>Developing and releasing</summary>
 
 ```
 cmd/delegate/        Go source (standard library only)
-share/               config example, agent rules, skill, shared shell code
+share/               config example, rules, skill, shell helpers
 .github/workflows/   CI tests and releases
-install.sh           install
-uninstall.sh         uninstall
 ```
 
 ```bash
-make test    # vet + tests (offline, fake provider)
-make bin     # build release binaries locally into bin/ (gitignored)
-```
-
-**Release:** push a tag. CI tests, builds macOS and Linux binaries, and publishes a GitHub release.
-
-```bash
-git tag v0.1.0 && git push origin v0.1.0
+make test                                  # offline tests
+make bin                                   # local release build into bin/
+git tag v0.1.1 && git push origin v0.1.1   # CI builds and publishes a release
 ```
 
 </details>
