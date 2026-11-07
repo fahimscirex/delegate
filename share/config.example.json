@@ -1,0 +1,17 @@
+{
+  "default_tier": "cheap",
+  "max_steps": 40,
+  "bash_timeout_s": 120,
+  "providers": {
+    "opencode-go": {
+      "base_url": "https://opencode.ai/inference/go/v1",
+      "key_env": "OPENCODE_GO_API_KEY",
+      "headers": { "x-opencode-session": "{session}" }
+    }
+  },
+  "tiers": {
+    "cheap":  { "provider": "opencode-go", "model": "deepseek-v4.1-flash" },
+    "mid":    { "provider": "opencode-go", "model": "glm-5.3" },
+    "strong": { "provider": "opencode-go", "model": "deepseek-v4-pro" }
+  }
+}
